@@ -2075,7 +2075,17 @@ def generate(config_root_data, cfg_name, main_template):
                 def option(conversion_config):
                     gen.add_aprinter_include('printer/thermistor/InterpolationTableThermistor_tables.h')
                     return TemplateExpr('InterpolationTableThermistorService', ['InterpolationTableE3dPt100'])
-                
+
+                @conversion_sel.option('Ad849xFormula')
+                def option(conversion_config):
+                    gen.add_aprinter_include('printer/thermistor/Ad849xFormula.h')
+                    return TemplateExpr('Ad849xFormulaService', [
+                        gen.add_float_config('{}HeaterTempOffsetVoltage'.format(name), conversion_config.get_float('OffsetVoltage')),
+                        gen.add_float_config('{}HeaterTempSlope'.format(name), conversion_config.get_float('Slope')),
+                        gen.add_float_config('{}HeaterTempMinTemp'.format(name), conversion_config.get_float('MinTemp')),
+                        gen.add_float_config('{}HeaterTempMaxTemp'.format(name), conversion_config.get_float('MaxTemp')),
+                    ])
+
                 conversion = heater.do_selection('conversion', conversion_sel)
                 
                 for control in heater.enter_config('control'):
