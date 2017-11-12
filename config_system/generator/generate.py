@@ -1594,7 +1594,12 @@ def generate(config_root_data, cfg_name, main_template):
                         gen.add_aprinter_include('printer/modules/StubCommandModule.h')
                         stub_command_module = gen.add_module()
                         stub_command_module.set_expr('StubCommandModuleService')
-                
+
+                    if development.get_bool('EnableSerialDisplayModule'):
+                        gen.add_aprinter_include('printer/modules/SerialDisplayModule.h')
+                        stub_command_module = gen.add_module()
+                        stub_command_module.set_expr('SerialDisplayModuleService')
+
                 for serial in board_data.iter_list_config('serial_ports', max_count=5):
                     gen.add_aprinter_include('printer/modules/SerialModule.h')
                     gen.add_aprinter_include('printer/utils/GcodeParser.h')

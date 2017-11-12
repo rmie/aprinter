@@ -206,7 +206,6 @@ private:
     APRINTER_DEFINE_CALL_IF_EXISTS(CallIfExists_check_move_interlocks, check_move_interlocks)
     APRINTER_DEFINE_CALL_IF_EXISTS(CallIfExists_planner_underrun, planner_underrun)
     APRINTER_DEFINE_CALL_IF_EXISTS(CallIfExists_get_json_status, get_json_status)
-    APRINTER_DEFINE_CALL_IF_EXISTS(CallIfExists_get_m408_status, get_m408_status)
     
     struct PlannerUnion;
     struct PlannerUnionPlanner;
@@ -2433,31 +2432,6 @@ private:
                     }
                     return cmd->finishCommand(c);
                 } break;
-                
-                case 408: {
-                    /* M408 S0
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55160060}
-                       M408 S1
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55165676}
-                       M408 S2
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55213620,"coldExtrudeTemp":0,"coldRetractTemp":0.0,"geometry":"coreXY","name":"RepRap","tools":[{"number":0,"heaters":[1],"drives":[1]},{"number":1,"heaters":[1],"drives":[1]},{"number":2,"heaters":[1],"drives":[1]}]}
-                       M408 S3
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55244837,"currentLayer":0,"extrRaw":[0,0,0],"fractionPrinted":0.000000,"firstLayerHeight":0.000000}
-                       M408 S4
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55268085,"axisMins":[0,0,0],"axisMaxes":[370,300,150],"accelerations":[2000.000000,2000.000000,100.000000,5000.000000,5000.000000,5000.000000],"firmwareElectronics":"Arduino Due","firmwareName":"Repetier","firmwareVersion":"0.92.9","minFeedrates":[0,0,0,0,0,0],"maxFeedrates":[300.000000,300.000000,5.000000,50.000000,50.000000,50.000000]}
-                       M408 S5
-                       {"status": "I","coords": {"axesHomed":[0, 0, 0],"extr":[0.000000,0.000000,0.000000],"xyz":[0.000000,0.000000,0.000000]},"currentTool":0,"params": {"atxPower":0,"fanPercent":[0.000000],"speedFactor":100,"extrFactors":[100,100,100]},"temps": {"heads": {"current": [22.083333,22.222221,178.291015],"active": [0.000000,0.000000,0.000000],"state": [1,1,1]}},"time":55311726,"axisMins":[0,0,0],"axisMaxes":[370,300,150],"accelerations":[2000.000000,2000.000000,100.000000,5000.000000,5000.000000,5000.000000],"firmwareElectronics":"Arduino Due","firmwareName":"Repetier","firmwareVersion":"0.92.9","minFeedrates":[0,0,0,0,0,0],"maxFeedrates":[300.000000,300.000000,5.000000,50.000000,50.000000,50.000000]}
-                     */
-
-                    cmd->reply_append_pstr(c, AMBRO_PSTR("ok\n"));
-                    JsonBuilder builder;
-                    builder.loadBuffer(ob->json_buffer, sizeof(ob->json_buffer));
-                    builder.addSafeKeyVal("active", JsonBool{ob->active});
-                    builder.addSafeKeyVal("speedRatio", JsonDouble{1.0f / ob->speed_ratio_rec});
-                    cmd->reply_append_buffer(c, ob->json_buffer, builder.getLength());
-                    cmd->reply_append_ch(c, '\n');
-                    return cmd->finishCommand(c);
-                } break;
 
                 case 930: { // apply configuration
                     if (!cmd->tryUnplannedCommand(c)) {
@@ -3147,7 +3121,6 @@ public:
             PhysVirtAxisMaskType move_axes;
         };
         char msg_buffer[MaxMsgSize];
-        char json_buffer[256 + 2];
     };
 };
 

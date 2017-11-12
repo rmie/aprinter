@@ -66,41 +66,26 @@ struct JsonSafeChar {
     char val;
 };
 
-class JsonBuilder {
+class AbstractJsonBuilder {
 public:
-    void loadBuffer (char *buffer, size_t buffer_total_size)
-    {
-        AMBRO_ASSERT(buffer_total_size > 0)
-        
-        m_buffer = buffer;
-        m_buffer_size = buffer_total_size - 1;
-        m_length = 0;
-    }
-    
-    size_t getLength ()
-    {
-        AMBRO_ASSERT(m_length <= m_buffer_size)
-        return m_length;
-    }
-    
-    void start ()
+    AbstractJsonBuilder& start ()
     {
         m_inhibit_comma = true;
+        return *this;
     }
     
-    void add (JsonUint32 val)
+    AbstractJsonBuilder& add (JsonUint32 val)
     {
         adding_element();
-        
-        char *end = get_end();
-        snprintf(end, get_rem()+1, "%" PRIu32, val.val);
-        m_length += strlen(end);
+
+        print("%" PRIu32, val.val);
+        return *this;
     }
-    
-    void add (JsonDouble val)
+
+    AbstractJsonBuilder& add (JsonDouble val)
     {
         adding_element();
-        
+
         if (AMBRO_UNLIKELY(val.val == INFINITY)) {
             add_token("1e1024");
         }
@@ -108,34 +93,36 @@ public:
             add_token("-1e1024");
         }
         else {
-            char *end = get_end();
-            snprintf(end, get_rem()+1, "%.6g", val.val);
-            m_length += strlen(end);
+            print("%.6g", val.val);
         }
+        return *this;
     }
-    
-    void add (JsonBool val)
+
+    AbstractJsonBuilder& add (JsonBool val)
     {
         adding_element();
-        
+
         add_token(val.val ? "true" : "false");
+        return *this;
     }
-    
-    void add (JsonNull)
+
+    AbstractJsonBuilder& add (JsonNull)
     {
         adding_element();
-        
+
         add_token("null");
+        return *this;
     }
-    
-    void beginString ()
+
+    AbstractJsonBuilder& beginString ()
     {
         adding_element();
         
         add_char('"');
+        return *this;
     }
     
-    void addStringChar (char ch)
+    AbstractJsonBuilder& addStringChar (char ch)
     {
         switch (ch) {
             case '\\':
@@ -173,118 +160,142 @@ public:
                 }
             } break;
         }
+        return *this;
     }
     
-    void addStringMem (MemRef mem)
+    AbstractJsonBuilder& addStringMem (MemRef mem)
     {
         for (auto i : LoopRange<size_t>(mem.len)) {
             addStringChar(mem.ptr[i]);
         }
+        return *this;
     }
     
-    void endString ()
+    AbstractJsonBuilder& endString ()
     {
         add_char('"');
+        return *this;
     }
     
-    void add (JsonString val)
+    AbstractJsonBuilder& add (JsonString val)
     {
         beginString();
         addStringMem(val.val);
         endString();
+        return *this;
     }
     
-    void add (JsonSafeString val)
+    AbstractJsonBuilder& add (JsonSafeString val)
     {
         beginString();
         add_token(val.val);
         endString();
+        return *this;
     }
     
-    void add (JsonSafeChar val)
+    AbstractJsonBuilder& add (JsonSafeChar val)
     {
         beginString();
         add_char(val.val);
         endString();
+        return *this;
     }
     
-    void startArray ()
+    AbstractJsonBuilder& startArray ()
     {
         start_list('[');
+        return *this;
     }
     
-    void endArray ()
+    AbstractJsonBuilder& endArray ()
     {
         end_list(']');
+        return *this;
     }
     
-    void startObject ()
+    template <typename Values>
+    AbstractJsonBuilder& addArray (JsonSafeString name, Values values)
+    {
+        add(name).entryValue().startArray();
+        values();
+        endArray();
+        return *this;
+    }
+
+    AbstractJsonBuilder& startObject ()
     {
         start_list('{');
+        return *this;
     }
     
-    void endObject ()
+    AbstractJsonBuilder& endObject ()
     {
         end_list('}');
+        return *this;
     }
-    
-    void entryValue ()
+
+    template <typename Members>
+    AbstractJsonBuilder& addObject (JsonSafeString name, Members members)
+    {
+        add(name).entryValue().startObject();
+        members();
+        endObject();
+        return *this;
+    }
+
+    AbstractJsonBuilder& entryValue ()
     {
         add_char(':');
         m_inhibit_comma = true;
+        return *this;
     }
     
     template <typename TKey, typename TVal>
-    void addKeyVal (TKey key, TVal val)
+    AbstractJsonBuilder& addKeyVal (TKey key, TVal val)
     {
         add(key);
         entryValue();
         add(val);
+        return *this;
     }
     
     template <typename TVal>
-    void addSafeKeyVal (char const *key, TVal val)
+    AbstractJsonBuilder& addSafeKeyVal (char const *key, TVal val)
     {
         addKeyVal(JsonSafeString{key}, val);
+        return *this;
     }
     
     template <typename TKey>
-    void addKeyObject (TKey key)
+    AbstractJsonBuilder& addKeyObject (TKey key)
     {
         add(key);
         entryValue();
         startObject();
+        return *this;
     }
     
     template <typename TKey>
-    void addKeyArray (TKey key)
+    AbstractJsonBuilder& addKeyArray (TKey key)
     {
         add(key);
         entryValue();
         startArray();
+        return *this;
     }
-    
-private:
+
+protected:
+    virtual void add_char (char ch) = 0;
+
+    // TODO: virtual dosen't work with templates
+    // template <typename... Args>
+    //virtual void print (char const *fmt, Args... arg) = 0;
+    virtual void print (char const *fmt, uint32_t val);
+    virtual void print (char const *fmt, double val);
+
     static char encode_hex_digit (int value)
     {
         return (value < 10) ? ('0' + value) : ('A' + (value - 10));
-    }
-    
-    char * get_end ()
-    {
-        return m_buffer + m_length;
-    }
-    
-    size_t get_rem ()
-    {
-        return m_buffer_size - m_length;
-    }
-    
-    void add_char (char ch)
-    {
-        if (AMBRO_LIKELY(m_length < m_buffer_size)) {
-            m_buffer[m_length++] = ch;
-        }
     }
     
     void add_token (char const *token)
@@ -316,13 +327,67 @@ private:
             add_char(',');
         }
     }
-    
-    char *m_buffer;
-    size_t m_buffer_size;
-    size_t m_length;
+
+private:
     bool m_inhibit_comma;
 };
 
-}
+
+class JsonBuilder : public AbstractJsonBuilder {
+public:
+    void loadBuffer (char *buffer, size_t buffer_total_size)
+    {
+        AMBRO_ASSERT(buffer_total_size > 0)
+
+        m_buffer = buffer;
+        m_buffer_size = buffer_total_size - 1;
+        m_length = 0;
+    }
+    
+    size_t getLength ()
+    {
+        AMBRO_ASSERT(m_length <= m_buffer_size)
+        return m_length;
+    }
+
+protected:
+    void print (char const *fmt, uint32_t val) override
+    {
+        char *end = get_end();
+        snprintf(end, get_rem()+1, "%.6g", val);
+        m_length += strlen(end);
+    }
+
+    void print (char const *fmt, double val) override
+    {
+        char *end = get_end();
+        snprintf(end, get_rem()+1, "%.6g", val);
+        m_length += strlen(end);
+    }
+
+    void add_char (char ch) override
+    {
+        if (AMBRO_LIKELY(m_length < m_buffer_size)) {
+            m_buffer[m_length++] = ch;
+        }
+    }
+
+private:
+    char * get_end ()
+    {
+        return m_buffer + m_length;
+    }
+
+    size_t get_rem ()
+    {
+        return m_buffer_size - m_length;
+    }
+
+    char *m_buffer;
+    size_t m_buffer_size;
+    size_t m_length;
+};
+
+};
 
 #endif
