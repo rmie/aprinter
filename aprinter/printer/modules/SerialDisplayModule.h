@@ -109,16 +109,13 @@ public:
             ListFor<AxesList>([&] APRINTER_TL(axis, (axis::IsExtruder ? extruder_axes : move_axes) |= axis::AxisMask()));
 
             CommandJsonBuilder b(c, cmd);
+            AbstractJsonBuilder* builder = &b;
 
-            AbstractJsonBuilder* builder = b.start();
-            builder->startObject()
+            builder->start().startObject()
             .addSafeKeyVal("active", JsonBool{o->active})
             .addObject(JsonSafeString{"coords"}, [&] {
-                builder->addArray(JsonSafeString{"axesHomed"}, [&] {
-                    ListFor<PhysVirtAxisHelperList>([&] APRINTER_TL(axis,
-                        if (axis::AxisMask & o->axis_homing) builder->add(JsonSafeChar{axis::AxisName})
-                ));})
-                .addArray(JsonSafeString{"extr"}, [&] {
+                ThePrinterMain::get_json_axis_homing(c, builder);
+                builder->addArray(JsonSafeString{"extr"}, [&] {
                     ListFor<PhysVirtAxisHelperList>([&] APRINTER_TL(axis,
                         if (axis::AxisMask & extruder_axes) builder->add(JsonDouble{axis::get_position(c)})
                 ));})

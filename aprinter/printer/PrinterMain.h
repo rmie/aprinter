@@ -2997,6 +2997,18 @@ public:
         ListFor<ModulesList>([&] APRINTER_TL(module, module::get_json_status(c, json)));
     }
     
+    template <typename TheJsonBuilder>
+    static void get_json_axis_homing (Context c, TheJsonBuilder *builder)
+    {
+        auto *o = Object::self(c);
+
+        builder->addArray(JsonSafeString{"axesHomed"}, [&] {
+            ListFor<PhysVirtAxisHelperList>([&] APRINTER_TL(axis,
+                // TODO: must not include extruder axes
+                builder->add(JsonBool{axis::AxisMask & o->axis_homing})
+        ));});
+    }
+
 private:
     static void config_manager_handler (Context c, bool success)
     {
