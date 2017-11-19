@@ -28,6 +28,7 @@
 #include <aprinter/meta/ServiceUtils.h>
 #include <aprinter/math/FloatTools.h>
 #include <aprinter/printer/Configuration.h>
+#include <aprinter/base/ProgramMemory.h>
 
 /*
  * AD849x - K-Type thermocouple amplifier, eg. https://www.adafruit.com/product/1778
@@ -59,6 +60,11 @@ public:
 
     static FpType adcToTemp (Context c, FpType adc)
     {
+        // prevent thermal runaway
+        if (0 >= APRINTER_CFG(Config, CAdcSlope, c)) {
+            Context::Printer::print_pgm_string(c, AMBRO_PSTR("//Error:AdcSlope must be positive\n"));
+            return INFINITY;
+        }
         if (!(adc <= APRINTER_CFG(Config, CAdcMaxTemp, c))) {
             return INFINITY;
         }
